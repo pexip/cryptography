@@ -3,6 +3,7 @@
 // for complete details.
 
 use cryptography_crypto::constant_time;
+use openssl::mac as ossl_mac;
 use pyo3::types::{PyAnyMethods, PyBytesMethods};
 
 use crate::backend::cipher_registry;
@@ -15,18 +16,18 @@ use crate::{exceptions, types};
     name = "CMAC"
 )]
 struct Cmac {
-    ctx: Option<cryptography_openssl::cmac::Cmac>,
+    ctx: Option<ossl_mac::MacCtx>,
 }
 
 impl Cmac {
-    fn get_ctx(&self) -> CryptographyResult<&cryptography_openssl::cmac::Cmac> {
+    fn get_ctx(&self) -> CryptographyResult<&ossl_mac::MacCtx> {
         if let Some(ctx) = self.ctx.as_ref() {
             return Ok(ctx);
         };
         Err(exceptions::already_finalized_error())
     }
 
-    fn get_mut_ctx(&mut self) -> CryptographyResult<&mut cryptography_openssl::cmac::Cmac> {
+    fn get_mut_ctx(&mut self) -> CryptographyResult<&mut ossl_mac::MacCtx> {
         if let Some(ctx) = self.ctx.as_mut() {
             return Ok(ctx);
         }
@@ -64,7 +65,9 @@ impl Cmac {
         let key = algorithm
             .getattr(pyo3::intern!(py, "key"))?
             .extract::<CffiBuf<'_>>()?;
-        let ctx = cryptography_openssl::cmac::Cmac::new(key.as_bytes(), cipher)?;
+        let mac = ossl_mac::Mac::cmac();
+        let mut ctx = ossl_mac::MacCtx::new(&mac)?;
+        ctx.init_cipher(key.as_bytes(), cipher)?;
         Ok(Cmac { ctx: Some(ctx) })
     }
 
@@ -77,7 +80,7 @@ impl Cmac {
         &mut self,
         py: pyo3::Python<'p>,
     ) -> CryptographyResult<pyo3::Bound<'p, pyo3::types::PyBytes>> {
-        let data = self.get_mut_ctx()?.finish()?;
+        let data = self.get_mut_ctx()?.finalize_to_vec()?;
         self.ctx = None;
         Ok(pyo3::types::PyBytes::new(py, &data))
     }
@@ -96,7 +99,7 @@ impl Cmac {
 
     fn copy(&self) -> CryptographyResult<Cmac> {
         Ok(Cmac {
-            ctx: Some(self.get_ctx()?.copy()?),
+            ctx: Some(self.get_ctx()?.clone()),
         })
     }
 }
