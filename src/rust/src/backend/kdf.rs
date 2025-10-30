@@ -531,7 +531,7 @@ fn hkdf_extract(
     algorithm: &pyo3::Py<pyo3::PyAny>,
     salt: Option<&pyo3::Py<pyo3::types::PyBytes>>,
     key_material: &CffiBuf<'_>,
-) -> CryptographyResult<cryptography_openssl::hmac::DigestBytes> {
+) -> CryptographyResult<Vec<u8>> {
     let algorithm_bound = algorithm.bind(py);
     let digest_size = algorithm_bound
         .getattr(pyo3::intern!(py, "digest_size"))?

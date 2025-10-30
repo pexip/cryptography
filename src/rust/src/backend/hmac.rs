@@ -3,6 +3,7 @@
 // for complete details.
 
 use cryptography_crypto::constant_time;
+use openssl::mac as ossl_mac;
 
 use crate::backend::hashes::message_digest_from_algorithm;
 use crate::buf::CffiBuf;
@@ -16,7 +17,7 @@ use crate::exceptions;
 pub(crate) struct Hmac {
     #[pyo3(get)]
     algorithm: pyo3::Py<pyo3::PyAny>,
-    ctx: Option<cryptography_openssl::hmac::Hmac>,
+    ctx: Option<ossl_mac::MacCtx>,
 }
 
 impl Hmac {
@@ -26,7 +27,8 @@ impl Hmac {
         algorithm: &pyo3::Bound<'_, pyo3::PyAny>,
     ) -> CryptographyResult<Hmac> {
         let md = message_digest_from_algorithm(py, algorithm)?;
-        let ctx = cryptography_openssl::hmac::Hmac::new(key, md).map_err(|_| {
+        let mut ctx = ossl_mac::MacCtx::new(&ossl_mac::Mac::hmac())?;
+        ctx.init_digest(key, &md).map_err(|_| {
             exceptions::UnsupportedAlgorithm::new_err((
                 "Digest is not supported for HMAC",
                 exceptions::Reasons::UNSUPPORTED_HASH,
@@ -44,22 +46,20 @@ impl Hmac {
         Ok(())
     }
 
-    pub(crate) fn finalize_bytes(
-        &mut self,
-    ) -> CryptographyResult<cryptography_openssl::hmac::DigestBytes> {
-        let data = self.get_mut_ctx()?.finish()?;
+    pub(crate) fn finalize_bytes(&mut self) -> CryptographyResult<Vec<u8>> {
+        let data = self.get_mut_ctx()?.finalize_to_vec()?;
         self.ctx = None;
         Ok(data)
     }
 
-    fn get_ctx(&self) -> CryptographyResult<&cryptography_openssl::hmac::Hmac> {
+    fn get_ctx(&self) -> CryptographyResult<&ossl_mac::MacCtxRef> {
         if let Some(ctx) = self.ctx.as_ref() {
             return Ok(ctx);
         };
         Err(exceptions::already_finalized_error())
     }
 
-    fn get_mut_ctx(&mut self) -> CryptographyResult<&mut cryptography_openssl::hmac::Hmac> {
+    fn get_mut_ctx(&mut self) -> CryptographyResult<&mut ossl_mac::MacCtxRef> {
         if let Some(ctx) = self.ctx.as_mut() {
             return Ok(ctx);
         }
@@ -107,7 +107,7 @@ impl Hmac {
 
     pub(crate) fn copy(&self, py: pyo3::Python<'_>) -> CryptographyResult<Hmac> {
         Ok(Hmac {
-            ctx: Some(self.get_ctx()?.copy()?),
+            ctx: Some(self.get_ctx()?.to_owned()),
             algorithm: self.algorithm.clone_ref(py),
         })
     }
