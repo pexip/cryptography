@@ -65,8 +65,7 @@ impl Cmac {
         let key = algorithm
             .getattr(pyo3::intern!(py, "key"))?
             .extract::<CffiBuf<'_>>()?;
-        let mac = ossl_mac::Mac::cmac();
-        let mut ctx = ossl_mac::MacCtx::new(&mac)?;
+        let mut ctx = ossl_mac::MacCtx::new(&ossl_mac::Mac::cmac())?;
         ctx.init_cipher(key.as_bytes(), cipher)?;
         Ok(Cmac { ctx: Some(ctx) })
     }
