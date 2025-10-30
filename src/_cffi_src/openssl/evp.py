@@ -30,15 +30,10 @@ const EVP_MD *EVP_get_digestbyname(const char *);
 EVP_PKEY *EVP_PKEY_new(void);
 void EVP_PKEY_free(EVP_PKEY *);
 int EVP_PKEY_type(int);
-RSA *EVP_PKEY_get1_RSA(EVP_PKEY *);
-
-int EVP_PKEY_set1_DSA(EVP_PKEY *, DSA *);
 
 int EVP_PKEY_id(const EVP_PKEY *);
 
 int EVP_PKEY_bits(const EVP_PKEY *);
-
-int EVP_PKEY_assign_RSA(EVP_PKEY *, RSA *);
 """
 
 CUSTOMIZATIONS = """

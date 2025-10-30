@@ -30,7 +30,6 @@ int BN_hex2bn(BIGNUM **, const char *);
 /* The following 3 prime methods are exposed for Tribler. */
 int BN_generate_prime_ex(BIGNUM *, int, int, const BIGNUM *,
                          const BIGNUM *, BN_GENCB *);
-int BN_is_prime_ex(const BIGNUM *, int, BN_CTX *, BN_GENCB *);
 const int BN_prime_checks_for_size(int);
 """
 

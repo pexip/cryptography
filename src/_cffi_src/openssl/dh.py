@@ -13,7 +13,6 @@ typedef ... DH;
 """
 
 FUNCTIONS = """
-void DH_free(DH *);
 """
 
 CUSTOMIZATIONS = """
